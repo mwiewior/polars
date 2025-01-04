@@ -9,3 +9,4 @@ pub mod ipc;
 pub mod ndjson;
 #[cfg(feature = "parquet")]
 pub mod parquet;
+pub mod anonymous;

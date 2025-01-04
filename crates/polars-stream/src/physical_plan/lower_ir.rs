@@ -442,16 +442,7 @@ pub fn lower_ir(
                 unreachable!();
             };
 
-            if scan_sources.is_empty()
-                || unified_scan_args
-                    .pre_slice
-                    .as_ref()
-                    .is_some_and(|slice| slice.len() == 0)
-            {
-                if config::verbose() {
-                    eprintln!("lower_ir: scan IR had empty sources")
-                }
-
+            if scan_sources.is_empty() && !matches!(*scan_type, FileScan::Anonymous { .. }) {
                 // If there are no sources, just provide an empty in-memory source with the right
                 // schema.
                 PhysNodeKind::InMemorySource {
@@ -509,7 +500,16 @@ pub fn lower_ir(
                         )
                     },
 
-                    FileScan::Anonymous { .. } => todo!("unimplemented: AnonymousScan"),
+                    FileScan::Anonymous { function, options } => {
+                        let node = phys_sm.insert(PhysNode::new(
+                            output_schema,
+                            PhysNodeKind::AnonymousScan {
+                                function: function.clone(),
+                                options: options.clone(),
+                            },
+                        ));
+                        return Ok(PhysStream::first(node));
+                    },
                 };
 
                 {

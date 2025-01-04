@@ -14,7 +14,7 @@ use polars_expr::state::ExecutionState;
 use polars_mem_engine::{create_physical_plan, create_scan_predicate};
 use polars_plan::dsl::{JoinOptions, PartitionVariantIR, ScanSources};
 use polars_plan::plans::expr_ir::ExprIR;
-use polars_plan::plans::{AExpr, ArenaExprIter, Context, IR};
+use polars_plan::plans::{AExpr, ArenaExprIter, Context, ScanSources, IR};
 use polars_plan::prelude::{FileType, FunctionFlags};
 use polars_utils::arena::{Arena, Node};
 use polars_utils::format_pl_smallstr;
@@ -106,6 +106,13 @@ fn to_graph_rec<'a>(
     let graph_key = match &node.kind {
         InMemorySource { df } => ctx.graph.add_node(
             nodes::in_memory_source::InMemorySourceNode::new(df.clone(), MorselSeq::default()),
+            [],
+        ),
+        AnonymousScan { function, options } => ctx.graph.add_node(
+            nodes::io_sources::anonymous::AnonymousSourceNode::new(
+                function.clone(),
+                options.clone(),
+            ),
             [],
         ),
         SinkMultiple { sinks } => {
@@ -546,9 +553,63 @@ fn to_graph_rec<'a>(
                             nodes::io_sources::multi_file_reader::DEFAULT_N_READERS_PRE_INIT,
                         verbose,
                     },
+<<<<<<< HEAD
                 )),
                 [],
             )
+=======
+                    #[cfg(feature = "ipc")]
+                    FileScan::Ipc {
+                        options,
+                        cloud_options,
+                        metadata: first_metadata,
+                    } => ctx.graph.add_node(
+                        nodes::io_sources::ipc::IpcSourceNode::new(
+                            scan_sources,
+                            file_info,
+                            hive_parts,
+                            predicate,
+                            options,
+                            cloud_options,
+                            file_options,
+                            first_metadata,
+                        )?,
+                        [],
+                    ),
+                    #[cfg(feature = "csv")]
+                    FileScan::Csv { options, .. } => {
+                        assert!(predicate.is_none());
+
+                        if options.parse_options.comment_prefix.is_some() {
+                            // Should have been re-written to separate streaming nodes
+                            assert!(file_options.row_index.is_none());
+                            assert!(file_options.slice.is_none());
+                        }
+
+                        ctx.graph.add_node(
+                            nodes::io_sources::csv::CsvSourceNode::new(
+                                scan_sources,
+                                file_info,
+                                file_options,
+                                options,
+                            ),
+                            [],
+                        )
+                    },
+                    FileScan::Anonymous { options, function} => {
+                        println!("Anonymous scan adding");
+                        ctx.graph.add_node(
+                            nodes::io_sources::anonymous::AnonymousSourceNode::new(
+                                function,
+                                options
+                            ),
+                            [],
+                        )
+                    },
+                    _ => todo!(),
+                }
+            }
+>>>>>>> b32ced663 (feat: Streaming (old+new engine) for anonymous_scan)
         },
 
         GroupBy { input, key, aggs } => {

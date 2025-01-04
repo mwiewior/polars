@@ -104,10 +104,14 @@ where
                     Ok(Box::new(src) as Box<dyn Source>)
                 },
                 #[cfg(feature = "parquet")]
-                FileScan::Parquet {
-                    options: parquet_options,
-                    metadata,
-                } => panic!("Parquet no longer supported for old streaming engine"),
+                FileScan::Parquet { .. } => {
+                    panic!("Parquet no longer supported for old streaming engine")
+                },
+                FileScan::Anonymous { options, function } => {
+                    let src =
+                        sources::AnonymousSource::new(options, function, schema.clone(), verbose);
+                    Ok(Box::new(src) as Box<dyn Source>)
+                },
                 _ => todo!(),
             }
         },

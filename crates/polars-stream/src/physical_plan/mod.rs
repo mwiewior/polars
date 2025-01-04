@@ -25,7 +25,7 @@ mod to_graph;
 
 pub use fmt::visualize_plan;
 use polars_plan::dsl::ExtraColumnsPolicy;
-use polars_plan::prelude::FileType;
+use polars_plan::prelude::{AnonymousScan, AnonymousScanOptions, FileType};
 use polars_utils::arena::{Arena, Node};
 use polars_utils::pl_str::PlSmallStr;
 use polars_utils::slice_enum::Slice;
@@ -220,6 +220,10 @@ pub enum PhysNodeKind {
         /// Schema of columns contained in the file. Does not contain external columns (e.g. hive / row_index).
         file_schema: SchemaRef,
     },
+    AnonymousScan {
+        function: Arc<dyn AnonymousScan>,
+        options: Arc<AnonymousScanOptions>,
+    },
 
     #[cfg(feature = "python")]
     PythonScan {
@@ -291,6 +295,7 @@ fn visit_node_inputs_mut(
         match &mut phys_sm[node].kind {
             PhysNodeKind::InMemorySource { .. }
             | PhysNodeKind::MultiScan { .. }
+            | PhysNodeKind::AnonymousScan { .. }
             | PhysNodeKind::InputIndependentSelect { .. } => {},
             #[cfg(feature = "python")]
             PhysNodeKind::PythonScan { .. } => {},

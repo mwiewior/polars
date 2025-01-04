@@ -4,6 +4,7 @@ mod frame;
 mod ipc_one_shot;
 mod reproject;
 mod union;
+mod anonymous;
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -13,6 +14,7 @@ pub(crate) use frame::*;
 pub(crate) use ipc_one_shot::*;
 pub(crate) use reproject::*;
 pub(crate) use union::*;
+pub(crate) use anonymous::*;
 
 #[cfg(feature = "csv")]
 use super::*;
