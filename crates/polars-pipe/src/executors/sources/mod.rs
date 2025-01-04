@@ -6,6 +6,7 @@ mod ipc_one_shot;
 mod parquet;
 mod reproject;
 mod union;
+mod anonymous;
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -17,6 +18,7 @@ pub(crate) use ipc_one_shot::*;
 pub(crate) use parquet::*;
 pub(crate) use reproject::*;
 pub(crate) use union::*;
+pub(crate) use anonymous::*;
 
 #[cfg(feature = "csv")]
 use super::*;
