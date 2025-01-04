@@ -154,6 +154,10 @@ where
                     )?;
                     Ok(Box::new(src) as Box<dyn Source>)
                 },
+                FileScan::Anonymous { options, function } => {
+                    let src = sources::AnonymousSource::new(options, file_options, function, schema.clone(), verbose);
+                    Ok(Box::new(src) as Box<dyn Source>)
+                },
                 _ => todo!(),
             }
         },
