@@ -12,7 +12,7 @@ use polars_mem_engine::create_physical_plan;
 use polars_plan::dsl::JoinOptions;
 use polars_plan::global::_set_n_rows_for_scan;
 use polars_plan::plans::expr_ir::ExprIR;
-use polars_plan::plans::{AExpr, ArenaExprIter, Context, IR};
+use polars_plan::plans::{AExpr, ArenaExprIter, Context, ScanSources, IR};
 use polars_plan::prelude::{FileType, FunctionFlags};
 use polars_utils::arena::{Arena, Node};
 use polars_utils::itertools::Itertools;
@@ -407,6 +407,16 @@ fn to_graph_rec<'a>(
                                 file_info,
                                 file_options,
                                 options,
+                            ),
+                            [],
+                        )
+                    },
+                    FileScan::Anonymous { options, function} => {
+                        println!("Anonymous scan adding");
+                        ctx.graph.add_node(
+                            nodes::io_sources::anonymous::AnonymousSourceNode::new(
+                                function,
+                                options
                             ),
                             [],
                         )

@@ -332,7 +332,7 @@ pub fn lower_ir(
                 unreachable!();
             };
 
-            if scan_sources.is_empty() {
+            if scan_sources.is_empty() &&  !matches!(scan_type, FileScan::Anonymous{..}) {
                 // If there are no sources, just provide an empty in-memory source with the right
                 // schema.
                 PhysNodeKind::InMemorySource {
@@ -379,6 +379,7 @@ pub fn lower_ir(
                                 )
                             }
                         },
+                        FileScan::Anonymous { ..} => (None,None, None),
                         _ => todo!(),
                     };
 
