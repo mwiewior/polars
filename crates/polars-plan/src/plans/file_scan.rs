@@ -185,6 +185,7 @@ impl FileScan {
             #[cfg(feature = "json")]
             Self::NDJson { .. } => false,
             #[allow(unreachable_patterns)]
+            Self::Anonymous { .. } => true,
             _ => false,
         }
     }

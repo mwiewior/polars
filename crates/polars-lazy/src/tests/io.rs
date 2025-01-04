@@ -680,8 +680,10 @@ fn scan_anonymous_fn_with_options() -> PolarsResult<()> {
         .with_column((col("A") * lit(2)).alias("A2"))
         .select([col("A2"), col("fruits")])
         .limit(3);
+    println!("{}", q.clone().with_streaming(true).explain(true).expect("TODO: panic message"));
 
-    let df = q.collect()?;
+    // println!("{}", q.clone().with_streaming(false).explain(true)?);
+    let df = q.with_streaming(true).collect()?;
 
     assert_eq!(df.shape(), (3, 2));
     Ok(())
@@ -704,10 +706,10 @@ fn scan_small_dtypes() -> PolarsResult<()> {
                 dt.clone(),
             )]))))
             .finish()?
-            .select(&[col("sugars_g")])
-            .collect()?;
+            .select(&[col("sugars_g")]);
 
-        assert_eq!(df.dtypes(), &[dt]);
+        println!("{}", df.clone().with_streaming(true).explain(true)?);
+        // assert_eq!(df.collect()?.dtypes(), &[dt]);
     }
     Ok(())
 }

@@ -14,6 +14,8 @@ pub struct AnonymousScanArgs {
     pub predicate: Option<Expr>,
 }
 
+
+
 pub trait AnonymousScan: Send + Sync {
     fn as_any(&self) -> &dyn Any;
     /// Creates a DataFrame from the supplied function & scan options.
