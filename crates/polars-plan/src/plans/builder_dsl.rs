@@ -58,7 +58,7 @@ impl DslBuilder {
         };
 
         Ok(DslPlan::Scan {
-            sources: ScanSources::Buffers(Arc::default()),
+            sources: ScanSources::default(),
             file_info: Some(file_info),
             file_options,
             scan_type: FileScan::Anonymous {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use arrow::legacy::error::PolarsResult;
 use polars_core::prelude::SchemaRef;
-use polars_plan::plans::{AnonymousScan, AnonymousScanOptions, ScanSources};
+use polars_plan::plans::{AnonymousScan, AnonymousScanOptions};
 use polars_plan::prelude::FileScanOptions;
 use crate::operators::{DataChunk, PExecutionContext, Source, SourceResult};
 use polars_plan::prelude::AnonymousScanArgs;
