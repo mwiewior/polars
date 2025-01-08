@@ -1,16 +1,17 @@
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
-
+use pyo3::Python;
 use polars_core::prelude::*;
 
 use crate::dsl::Expr;
 
-pub struct AnonymousScanArgs {
+pub struct AnonymousScanArgs<'a> {
     pub n_rows: Option<usize>,
     pub with_columns: Option<Arc<[PlSmallStr]>>,
     pub schema: SchemaRef,
     pub output_schema: Option<SchemaRef>,
     pub predicate: Option<Expr>,
+    pub py: Option<Python<'a>>,
 }
 
 
