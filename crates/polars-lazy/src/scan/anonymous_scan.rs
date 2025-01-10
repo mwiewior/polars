@@ -1,4 +1,3 @@
-use pyo3::Python;
 use polars_core::prelude::*;
 use polars_io::RowIndex;
 
@@ -11,8 +10,7 @@ pub struct ScanArgsAnonymous {
     pub skip_rows: Option<usize>,
     pub n_rows: Option<usize>,
     pub row_index: Option<RowIndex>,
-    pub name: &'static str
-
+    pub name: &'static str,
 }
 
 impl Default for ScanArgsAnonymous {

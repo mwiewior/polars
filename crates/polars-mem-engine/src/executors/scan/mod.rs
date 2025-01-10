@@ -90,7 +90,6 @@ impl Executor for AnonymousScanExec {
             schema: self.file_info.schema.clone(),
             output_schema: self.output_schema.clone(),
             predicate: None,
-            py: None,
         };
         if self.predicate.is_some() {
             state.insert_has_window_function_flag()

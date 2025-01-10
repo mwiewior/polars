@@ -42,7 +42,6 @@ impl Source for AnonymousSource {
             schema: self.schema_ref.clone(),
             output_schema: None,
             predicate: None,
-            py: None,
         };
         let res = self.function.next_batch(args);
         match res {
