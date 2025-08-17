@@ -1,4 +1,3 @@
-use pyo3::Python;
 use polars_core::prelude::*;
 use polars_io::RowIndex;
 

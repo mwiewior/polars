@@ -1,8 +1,7 @@
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use polars_error::PolarsResult;
 use polars_expr::prelude::ExecutionState;
-use polars_plan::plans::{AnonymousScanOptions, ScanSources};
+use polars_plan::plans::AnonymousScanOptions;
 use polars_plan::prelude::{AnonymousScan};
 use crate::async_executor::{JoinHandle, TaskScope};
 use crate::graph::PortState;
