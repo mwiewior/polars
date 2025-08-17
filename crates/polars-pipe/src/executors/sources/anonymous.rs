@@ -1,44 +1,39 @@
 use std::sync::Arc;
 use arrow::legacy::error::PolarsResult;
 use polars_core::prelude::SchemaRef;
-use polars_plan::plans::{AnonymousScan, AnonymousScanOptions, ScanSources};
-use polars_plan::prelude::FileScanOptions;
+use polars_plan::dsl::AnonymousScanOptions;
+use polars_plan::plans::AnonymousScan;
 use crate::operators::{DataChunk, PExecutionContext, Source, SourceResult};
 use polars_plan::prelude::AnonymousScanArgs;
 
 pub struct AnonymousSource {
-    options: Arc<AnonymousScanOptions>,
-    file_options: FileScanOptions,
+    _options: Arc<AnonymousScanOptions>,
     function: Arc<dyn AnonymousScan>,
     schema_ref: SchemaRef,
-    verbose: bool,
+    _verbose: bool,
 }
 
 impl AnonymousSource {
     pub fn new(
         options: Arc<AnonymousScanOptions>,
-        file_options: FileScanOptions,
         function: Arc<dyn AnonymousScan>,
         schema_ref: SchemaRef,
-        verbose: bool
+        verbose: bool,
     ) -> Self {
         Self {
-            options,
-            file_options,
+            _options: options,
             function,
             schema_ref,
-            verbose,
-
+            _verbose: verbose,
         }
     }
-
 }
 
 impl Source for AnonymousSource {
-    fn get_batches(&mut self, context: &PExecutionContext) -> PolarsResult<SourceResult> {
+    fn get_batches(&mut self, _context: &PExecutionContext) -> PolarsResult<SourceResult> {
         let args = AnonymousScanArgs {
             n_rows: None,
-            with_columns: self.file_options.with_columns.clone(),
+            with_columns: None,
             schema: self.schema_ref.clone(),
             output_schema: None,
             predicate: None,

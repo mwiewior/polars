@@ -1,4 +1,4 @@
-use pyo3::Python;
+
 use polars_core::prelude::*;
 use polars_io::{HiveOptions, RowIndex};
 use polars_utils::slice_enum::Slice;

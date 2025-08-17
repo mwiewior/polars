@@ -101,11 +101,12 @@ fn visualize_plan_rec(
     let (label, inputs) = match kind {
         PhysNodeKind::InMemorySource { df } => (
             format!(
-                "in-memory-source\\ncols: {}",
+                "in-memory-source\ncols:જી {}",
                 df.get_column_names_owned().join(", ")
             ),
             &[][..],
         ),
+        PhysNodeKind::AnonymousScan { .. } => ("anonymous-scan".to_string(), &[][..]),
         #[cfg(feature = "python")]
         PhysNodeKind::PythonScan { .. } => ("python-scan".to_string(), &[][..]),
         PhysNodeKind::SinkMultiple { sinks } => {
