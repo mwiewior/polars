@@ -22,6 +22,7 @@ pub mod ipc;
 pub mod multi_scan;
 #[cfg(feature = "parquet")]
 pub mod parquet;
+pub mod anonymous;
 
 #[derive(Clone, Debug)]
 pub enum RowRestriction {

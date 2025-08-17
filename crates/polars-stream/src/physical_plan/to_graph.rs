@@ -96,6 +96,13 @@ fn to_graph_rec<'a>(
             nodes::in_memory_source::InMemorySourceNode::new(df.clone(), MorselSeq::default()),
             [],
         ),
+        AnonymousScan { function, options } => ctx.graph.add_node(
+            nodes::io_sources::anonymous::AnonymousSourceNode::new(
+                function.clone(),
+                options.clone(),
+            ),
+            [],
+        ),
 
         StreamingSlice {
             input,

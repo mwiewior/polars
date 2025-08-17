@@ -41,11 +41,12 @@ fn visualize_plan_rec(
     let (label, inputs) = match &phys_sm[node_key].kind {
         PhysNodeKind::InMemorySource { df } => (
             format!(
-                "in-memory-source\\ncols: {}",
+                "in-memory-source\ncols: {}",
                 df.get_column_names_owned().join(", ")
             ),
             &[][..],
         ),
+        PhysNodeKind::AnonymousScan { .. } => ("anonymous-scan".to_string(), &[][..]),
         PhysNodeKind::Select {
             input,
             selectors,

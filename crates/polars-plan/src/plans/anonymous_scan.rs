@@ -1,26 +1,29 @@
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
+use pyo3::Python;
 
 use polars_core::prelude::*;
 
 use crate::dsl::Expr;
 
-pub struct AnonymousScanArgs {
+pub struct AnonymousScanArgs<'a> {
     pub n_rows: Option<usize>,
     pub with_columns: Option<Arc<[PlSmallStr]>>,
     pub schema: SchemaRef,
     pub output_schema: Option<SchemaRef>,
     pub predicate: Option<Expr>,
+    pub py: Option<Python<'a>>,
 }
+
 
 pub trait AnonymousScan: Send + Sync {
     fn as_any(&self) -> &dyn Any;
     /// Creates a DataFrame from the supplied function & scan options.
-    fn scan(&self, scan_opts: AnonymousScanArgs) -> PolarsResult<DataFrame>;
+    fn scan(&self, scan_opts: AnonymousScanArgs<'_>) -> PolarsResult<DataFrame>;
 
     /// Produce the next batch Polars can consume. Implement this method to get proper
     /// streaming support.
-    fn next_batch(&self, scan_opts: AnonymousScanArgs) -> PolarsResult<Option<DataFrame>> {
+    fn next_batch(&self, scan_opts: AnonymousScanArgs<'_>) -> PolarsResult<Option<DataFrame>> {
         self.scan(scan_opts).map(Some)
     }
 
