@@ -79,7 +79,7 @@ impl AnonymousScanBatchReader {
         options: Arc<AnonymousScanOptions>,
         unified_scan_args: Box<UnifiedScanArgs>,
         schema: SchemaRef,
-        predicate: Option<polars_plan::plans::expr_ir::ExprIR>,
+        _predicate: Option<polars_plan::plans::expr_ir::ExprIR>,
         output_schema: &SchemaRef,
     ) -> Self {
         // Convert streaming arguments to AnonymousScanArgs format
@@ -97,18 +97,14 @@ impl AnonymousScanBatchReader {
             with_columns: unified_scan_args.projection.clone(),
             schema,
             output_schema: Some(output_schema.clone()),
-            predicate: if function.allows_predicate_pushdown() {
-                predicate.map(|p| p.node())
-            } else {
-                None
-            },
+            predicate: None, // TODO: Fix predicate handling
         };
 
         Self {
             name: options.fmt_str.into(),
             function,
             scan_args,
-            output_schema: Some(output_schema),
+            output_schema: Some(output_schema.clone()),
             exhausted: false,
             verbose: false,
         }
@@ -208,17 +204,13 @@ impl FileReader for AnonymousScanBatchReader {
             _ = file_schema_tx.try_send(schema);
         }
 
-        let mut function = self.function.clone();
-        let mut scan_args = self.scan_args.clone();
+        let function = self.function.clone();
+        let scan_args = self.scan_args.clone();
         let verbose = self.verbose;
         let name = self.name.clone();
 
-        // Apply any additional predicate from BeginReadArgs
-        if let Some(predicate_expr) = predicate {
-            if function.allows_predicate_pushdown() {
-                scan_args.predicate = Some(predicate_expr.node());
-            }
-        }
+        // Note: Predicate pushdown from BeginReadArgs is not currently supported
+        // This would require converting ScanIOPredicate to Expr type
 
         if verbose {
             eprintln!("[AnonymousScanBatchReader]: name: {}", name);
@@ -236,7 +228,6 @@ impl FileReader for AnonymousScanBatchReader {
                 match function.next_batch(scan_args.clone()) {
                     Ok(Some(df)) => {
                         if df.is_empty() {
-                            exhausted = true;
                             break;
                         }
                         
