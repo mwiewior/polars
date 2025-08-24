@@ -1,5 +1,6 @@
 pub mod multi_file_reader;
 
+pub mod anonymous_scan;
 pub mod batch;
 #[cfg(feature = "csv")]
 pub mod csv;

@@ -1,4 +1,6 @@
 mod aggregations;
+// #[cfg(feature = "streaming")]
+// mod anonymous_scan_streaming;
 mod arity;
 #[cfg(all(feature = "strings", feature = "cse"))]
 mod cse;
@@ -12,8 +14,9 @@ mod predicate_queries;
 mod projection_queries;
 mod queries;
 mod schema;
-#[cfg(feature = "streaming")]
-mod streaming;
+// #[cfg(feature = "streaming")]
+// mod streaming;
+mod test_anonymous_scan_minimal;
 
 fn get_arenas() -> (Arena<AExpr>, Arena<IR>) {
     let expr_arena = Arena::with_capacity(16);

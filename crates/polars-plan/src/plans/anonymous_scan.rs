@@ -5,6 +5,7 @@ use polars_core::prelude::*;
 
 use crate::dsl::Expr;
 
+#[derive(Clone)]
 pub struct AnonymousScanArgs {
     pub n_rows: Option<usize>,
     pub with_columns: Option<Arc<[PlSmallStr]>>,

@@ -509,7 +509,26 @@ pub fn lower_ir(
                         )
                     },
 
-                    FileScan::Anonymous { .. } => todo!("unimplemented: AnonymousScan"),
+                    FileScan::Anonymous { function, options } => {
+                        use crate::nodes::io_sources::anonymous_scan::{
+                            AnonymousScanBatchReader, AnonymousScanReaderBuilder,
+                        };
+                        use std::sync::Mutex;
+
+                        let batch_reader = AnonymousScanBatchReader::new(
+                            function.clone(),
+                            options.clone(),
+                            unified_scan_args.clone(),
+                            file_info.schema.clone(),
+                            predicate.clone(),
+                            &output_schema,
+                        );
+
+                        Arc::new(AnonymousScanReaderBuilder {
+                            name: options.fmt_str.into(),
+                            reader: Mutex::new(Some(batch_reader)),
+                        })
+                    },
                 };
 
                 {
