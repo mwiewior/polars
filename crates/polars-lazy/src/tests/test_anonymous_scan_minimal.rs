@@ -190,4 +190,28 @@ mod tests {
         assert!(file_scan.streamable(), "AnonymousScan should be streamable after our fix");
         println!("✅ FileScan::Anonymous.streamable() returns true");
     }
+
+    #[test]
+    #[cfg(all(feature = "streaming", feature = "new_streaming"))]
+    fn test_anonymous_scan_new_streaming_plan_shows_streaming() -> PolarsResult<()> {
+        // Create test data
+        let test_df = df! {
+            "a" => [1, 2, 3],
+            "b" => ["x", "y", "z"]
+        }?;
+
+        let scan = Arc::new(TestScan::new(test_df));
+
+        // Create LazyFrame with new streaming enabled
+        let lf = LazyFrame::anonymous_scan(scan, Default::default())?
+            .with_new_streaming(true);
+
+        // Get the optimized execution plan
+        let plan = lf.describe_optimized_plan()?;
+
+        // Check that the plan contains the string "STREAMING"
+        assert!(plan.contains("STREAMING"));
+
+        Ok(())
+    }
 }

@@ -282,9 +282,6 @@ pub fn execute_graph(
     }
 
     loop {
-        if polars_core::config::verbose() {
-            eprintln!("polars-stream: updating graph state");
-        }
         graph.update_all_states(&state)?;
         let (nodes, pipes) = find_runnable_subgraph(graph);
         if polars_core::config::verbose() {
@@ -299,9 +296,6 @@ pub fn execute_graph(
             break;
         }
         run_subgraph(graph, &nodes, &pipes, &state)?;
-        if polars_core::config::verbose() {
-            eprintln!("polars-stream: done running graph phase");
-        }
     }
 
     // Ensure everything is done.

@@ -448,10 +448,6 @@ pub fn lower_ir(
                     .as_ref()
                     .is_some_and(|slice| slice.len() == 0)
             {
-                if config::verbose() {
-                    eprintln!("lower_ir: scan IR had empty sources")
-                }
-
                 // If there are no sources, just provide an empty in-memory source with the right
                 // schema.
                 PhysNodeKind::InMemorySource {
