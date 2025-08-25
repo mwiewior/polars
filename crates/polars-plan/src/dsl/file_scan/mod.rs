@@ -108,6 +108,7 @@ impl FileScan {
             Self::Parquet { .. } => true,
             #[cfg(feature = "json")]
             Self::NDJson { .. } => false,
+            Self::Anonymous { .. } => true,
             #[allow(unreachable_patterns)]
             _ => false,
         }

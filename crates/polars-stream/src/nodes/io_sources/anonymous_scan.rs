@@ -1,18 +1,16 @@
 //! Anonymous scan support for streaming engine
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use polars_core::frame::DataFrame;
 use polars_core::schema::SchemaRef;
-use polars_error::{PolarsResult, polars_bail, polars_err};
+use polars_error::{PolarsResult, polars_bail};
 use polars_plan::plans::{AnonymousScan, AnonymousScanArgs};
 use polars_plan::prelude::{AnonymousScanOptions, UnifiedScanArgs};
 use polars_utils::pl_str::PlSmallStr;
-use polars_utils::IdxSize;
 
 use crate::async_executor::{JoinHandle, TaskPriority, spawn};
-use crate::execute::StreamingExecutionState;
 use crate::morsel::{Morsel, MorselSeq, SourceToken};
 use crate::nodes::io_sources::multi_file_reader::reader_interface::output::{
     FileReaderOutputRecv, FileReaderOutputSend,
@@ -24,13 +22,16 @@ use crate::nodes::io_sources::multi_file_reader::reader_interface::builder::File
 use crate::nodes::io_sources::multi_file_reader::reader_interface::capabilities::ReaderCapabilities;
 
 pub struct AnonymousScanReaderBuilder {
-    pub name: PlSmallStr,
-    pub reader: Mutex<Option<AnonymousScanBatchReader>>,
+    pub function: Arc<dyn AnonymousScan>,
+    pub options: Arc<AnonymousScanOptions>,
+    pub unified_scan_args: Box<UnifiedScanArgs>,
+    pub schema: SchemaRef,
+    pub output_schema: SchemaRef,
 }
 
 impl FileReaderBuilder for AnonymousScanReaderBuilder {
     fn reader_name(&self) -> &str {
-        &self.name
+        &self.options.fmt_str
     }
 
     fn reader_capabilities(&self) -> ReaderCapabilities {
@@ -46,119 +47,41 @@ impl FileReaderBuilder for AnonymousScanReaderBuilder {
     ) -> Box<dyn FileReader> {
         assert_eq!(scan_source_idx, 0, "AnonymousScan should only have one source");
 
-        Box::new(
-            self.reader
-                .try_lock()
-                .unwrap()
-                .take()
-                .expect("AnonymousScanReaderBuilder called more than once"),
-        ) as Box<dyn FileReader>
+        Box::new(AnonymousScanBatchReader {
+            function: self.function.clone(),
+            scan_args: AnonymousScanArgs {
+                n_rows: self.unified_scan_args.pre_slice.as_ref().map(|slice| {
+                    match slice {
+                        polars_utils::slice_enum::Slice::Positive { len, .. } => *len,
+                        polars_utils::slice_enum::Slice::Negative { .. } => {
+                            // For negative slices, we can't determine n_rows upfront
+                            // Let the scan handle the full data and slice afterward
+                            usize::MAX
+                        }
+                    }
+                }),
+                with_columns: self.unified_scan_args.projection.clone(),
+                schema: self.schema.clone(),
+                output_schema: Some(self.output_schema.clone()),
+                predicate: None, // TODO: Fix predicate handling
+            },
+            exhausted: false,
+        })
     }
 }
 
 impl std::fmt::Debug for AnonymousScanReaderBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AnonymousScanReaderBuilder")
-            .field("name", &self.name)
+            .field("options", &self.options)
             .finish()
     }
 }
 
 pub struct AnonymousScanBatchReader {
-    pub name: PlSmallStr,
     pub function: Arc<dyn AnonymousScan>,
     pub scan_args: AnonymousScanArgs,
-    pub output_schema: Option<SchemaRef>,
     pub exhausted: bool,
-    pub verbose: bool,
-}
-
-impl AnonymousScanBatchReader {
-    pub fn new(
-        function: Arc<dyn AnonymousScan>,
-        options: Arc<AnonymousScanOptions>,
-        unified_scan_args: Box<UnifiedScanArgs>,
-        schema: SchemaRef,
-        _predicate: Option<polars_plan::plans::expr_ir::ExprIR>,
-        output_schema: &SchemaRef,
-    ) -> Self {
-        // Convert streaming arguments to AnonymousScanArgs format
-        let scan_args = AnonymousScanArgs {
-            n_rows: unified_scan_args.pre_slice.as_ref().map(|slice| {
-                match slice {
-                    polars_utils::slice_enum::Slice::Positive { len, .. } => *len,
-                    polars_utils::slice_enum::Slice::Negative { .. } => {
-                        // For negative slices, we can't determine n_rows upfront
-                        // Let the scan handle the full data and slice afterward
-                        usize::MAX
-                    }
-                }
-            }),
-            with_columns: unified_scan_args.projection.clone(),
-            schema,
-            output_schema: Some(output_schema.clone()),
-            predicate: None, // TODO: Fix predicate handling
-        };
-
-        Self {
-            name: options.fmt_str.into(),
-            function,
-            scan_args,
-            output_schema: Some(output_schema.clone()),
-            exhausted: false,
-            verbose: false,
-        }
-    }
-
-    fn get_next_batch(&mut self, _state: &StreamingExecutionState) -> PolarsResult<Option<DataFrame>> {
-        if self.exhausted {
-            return Ok(None);
-        }
-
-        match self.function.next_batch(self.scan_args.clone()) {
-            Ok(Some(df)) => {
-                if df.is_empty() {
-                    self.exhausted = true;
-                    Ok(None)
-                } else {
-                    Ok(Some(df))
-                }
-            }
-            Ok(None) => {
-                self.exhausted = true;
-                Ok(None)
-            }
-            Err(e) => {
-                self.exhausted = true;
-                Err(e)
-            }
-        }
-    }
-
-    fn infer_schema(&mut self, _state: &StreamingExecutionState) -> PolarsResult<SchemaRef> {
-        if let Some(schema) = &self.output_schema {
-            return Ok(schema.clone());
-        }
-
-        // Try to get the first batch to infer schema
-        match self.get_next_batch(_state)? {
-            Some(df) => {
-                let schema = df.schema();
-                self.output_schema = Some(schema.clone());
-                
-                // Reset state since we consumed a batch for schema inference
-                // This is a limitation - we'd need to buffer the first batch
-                // For now, we'll recreate the scan args and let the next call handle it
-                self.exhausted = false;
-                
-                Ok(schema.clone())
-            }
-            None => {
-                // Empty scan, return the input schema
-                Ok(self.scan_args.schema.clone())
-            }
-        }
-    }
 }
 
 #[async_trait]
@@ -180,9 +103,9 @@ impl FileReader for AnonymousScanBatchReader {
             num_pipelines: _,
             callbacks:
                 FileReaderCallbacks {
-                    file_schema_tx,
-                    n_rows_in_file_tx,
-                    row_position_on_end_tx,
+                    file_schema_tx: _,
+                    n_rows_in_file_tx: _,
+                    row_position_on_end_tx: _,
                 },
         } = args;
 
@@ -197,41 +120,22 @@ impl FileReader for AnonymousScanBatchReader {
             polars_bail!(InvalidOperation: "predicate pushdown not supported by this AnonymousScan");
         }
 
-        // Send file schema first
-        if let Some(mut file_schema_tx) = file_schema_tx {
-            let exec_state = StreamingExecutionState::default();
-            let schema = self.infer_schema(&exec_state)?;
-            _ = file_schema_tx.try_send(schema);
-        }
-
         let function = self.function.clone();
         let scan_args = self.scan_args.clone();
-        let verbose = self.verbose;
-        let name = self.name.clone();
-
-        // Note: Predicate pushdown from BeginReadArgs is not currently supported
-        // This would require converting ScanIOPredicate to Expr type
-
-        if verbose {
-            eprintln!("[AnonymousScanBatchReader]: name: {}", name);
-        }
 
         let (mut morsel_sender, morsel_rx) = FileReaderOutputSend::new_serial();
 
         let handle = spawn(TaskPriority::Low, async move {
             let mut seq: u64 = 0;
             let source_token = SourceToken::new();
-            let mut n_rows_seen: usize = 0;
-            let mut exhausted = false;
 
-            while !exhausted {
+            // Get data using next_batch method
+            loop {
                 match function.next_batch(scan_args.clone()) {
                     Ok(Some(df)) => {
                         if df.is_empty() {
                             break;
                         }
-                        
-                        n_rows_seen = n_rows_seen.saturating_add(df.height());
 
                         if morsel_sender
                             .send_morsel(Morsel::new(df, MorselSeq::new(seq), source_token.clone()))
@@ -243,38 +147,12 @@ impl FileReader for AnonymousScanBatchReader {
                         seq = seq.saturating_add(1);
                     }
                     Ok(None) => {
-                        exhausted = true;
+                        break;
                     }
                     Err(e) => {
                         return Err(e);
                     }
                 }
-            }
-
-            // Send row position at end
-            if let Some(mut row_position_on_end_tx) = row_position_on_end_tx {
-                let n_rows_seen = IdxSize::try_from(n_rows_seen)
-                    .map_err(|_| polars_err!(ComputeError: "row count overflow in anonymous scan"))?;
-                _ = row_position_on_end_tx.try_send(n_rows_seen);
-            }
-
-            // Send total row count if needed
-            if let Some(mut n_rows_in_file_tx) = n_rows_in_file_tx {
-                if verbose {
-                    eprintln!("[AnonymousScanBatchReader]: computing full row count");
-                }
-
-                // We need to continue scanning to get the full count
-                while let Ok(Some(df)) = function.next_batch(scan_args.clone()) {
-                    if df.is_empty() {
-                        break;
-                    }
-                    n_rows_seen = n_rows_seen.saturating_add(df.height());
-                }
-
-                let n_rows_seen = IdxSize::try_from(n_rows_seen)
-                    .map_err(|_| polars_err!(ComputeError: "row count overflow in anonymous scan"))?;
-                _ = n_rows_in_file_tx.try_send(n_rows_seen);
             }
 
             Ok(())

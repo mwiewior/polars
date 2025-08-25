@@ -36,9 +36,9 @@ polars-core = { workspace = true, features = ["partition_by"] }
 polars-error = { workspace = true }
 polars-expr = { workspace = true }
 polars-mem-engine = { workspace = true }
-polars-ops = { workspace = true }
+polars-ops = { workspace = true, features = ["semi_anti_join", "rle"] }
 polars-parquet = { workspace = true }
-polars-plan = { workspace = true }
+polars-plan = { workspace = true, features = ["semi_anti_join"] }
 
 [build-dependencies]
 version_check = { workspace = true }
@@ -56,6 +56,7 @@ json = ["polars-mem-engine/json", "polars-plan/json", "polars-io/json"]
 cloud = ["polars-mem-engine/cloud", "polars-plan/cloud", "polars-io/cloud"]
 dtype-categorical = ["polars-core/dtype-categorical"]
 object = ["polars-ops/object"]
+semi_anti_join = ["polars-ops/semi_anti_join", "polars-plan/semi_anti_join"]
 python = ["pyo3", "polars-plan/python"]
 
 # We need to specify default features here to match workspace defaults.
